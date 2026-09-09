@@ -7,6 +7,8 @@ Created on Wed Sep  9 16:04:46 2026
 
 from overall_modelling_woIA import overall
 
+import matplotlib.pyplot as plt
+
 import pandas as pd
 
 import numpy as np
@@ -20,30 +22,57 @@ npz_file_names = [
     if file.is_file()
 ]
 
-# CYCLOPEN_BUTANE_mass_0.25_0.75.npz
 
 # print(npz_file_names)
 
 
 # selected_fluid = 'R1233zd(E)'
-
-
 # selected_fluid = 'CYCLOPEN_BUTANE_mass_0.25_0.75'
 
 COP = np.zeros(len(npz_file_names))
 UA_ev = np.zeros(len(npz_file_names))
 UA_cd  = np.zeros(len(npz_file_names))
+pinch_ev = np.zeros(len(npz_file_names))
+pinch_cd = np.zeros(len(npz_file_names))
 
+mode = "UA_in" # "pinch_in" or "UA_in" or "base"
+
+pinches = {"pinch_ev" : 5,
+           "pinch_cd" : 5}
+
+# nw_1, COP_1, UA_ev_1, UA_cd_1, pinch_ev_1, pinch_cd_1 = overall(selected_fluid, mode, pinches)
+
+UAs = {"UA_ev": 460976.8631329016,
+       "UA_cd": 492569.33126388316}
+# nw_2, COP_2, UA_ev_2, UA_cd_2, pinch_ev_2, pinch_cd_2 = overall(selected_fluid, mode, UAs = UAs)
+
+
+""" Pinch based"""
+
+# mode = "pinch_in"
+# for i, one_fluid in enumerate(npz_file_names) :
+    
+#     _, COP[i], UA_ev[i], UA_cd[i], pinch_ev[i], pinch_cd[i]  = overall(one_fluid, mode, pinches)
+    
+# df = pd.DataFrame({ "Fluid":npz_file_names, 
+#                    "COP":COP, 
+#                    "UA_ev" :UA_ev, 
+#                    "UA_cd":UA_cd})
+
+""" UA based """
+
+mode = "UA_in"
 
 for i, one_fluid in enumerate(npz_file_names) :
     
-    _, COP[i], UA_ev[i], UA_cd[i] = overall(one_fluid)
+    _, COP[i], UA_ev[i], UA_cd[i], pinch_ev[i], pinch_cd[i] = overall(one_fluid, mode, UAs = UAs)
     
 df = pd.DataFrame({ "Fluid":npz_file_names, 
                    "COP":COP, 
                    "UA_ev" :UA_ev, 
-                   "UA_cd":UA_cd})
-
+                   "UA_cd":UA_cd,
+                   "pinch_ev": pinch_ev,
+                   "pinch_cd":pinch_cd})
 
 
 
@@ -52,11 +81,6 @@ df = pd.DataFrame({ "Fluid":npz_file_names,
 
 
 
-import numpy as np
-import pandas as pd
-
-
-import matplotlib.pyplot as plt
 
 # ==========================================================
 # PLOT CONTROLLERS
@@ -103,9 +127,12 @@ colors = {
 # ==========================================================
 # CREATE 3 SUBPLOTS
 # ==========================================================
-fig, axes = plt.subplots(3, 1, figsize=(12, 15), sharex=True)
+fig, axes = plt.subplots(1, 3, figsize=(20, 7), sharex=True)
 
-variables = ["COP", "UA_ev", "UA_cd"]
+if mode == 'pinch_in':
+    variables = ["COP", "UA_ev", "UA_cd"]
+if mode == 'UA_in' :
+    variables = ["COP", "pinch_ev", "pinch_cd"]
 
 for ax, var in zip(axes, variables):
 

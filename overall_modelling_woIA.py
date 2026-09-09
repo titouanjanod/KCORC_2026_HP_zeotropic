@@ -1,6 +1,6 @@
     
     
-def overall(selected_fluid): 
+def overall(selected_fluid, mode, pinches =None, UAs = None): 
     """1"""
     
     from tespy.networks import Network
@@ -90,19 +90,24 @@ def overall(selected_fluid):
         path= f"tables/{selected_fluid}.npz"
         )
     
-    pinch_ev = 5 # K
-    pinch_cd = 5  # K
-    # T_evap = 35       # degC, saturation temperature in the evaporator (5 K below the 40 degC injection limit)
-    # T_cond = 80       # degC, saturation temperature in the condenser
+
+    if mode == 'base':
+        T_evap = 35       # degC, saturation temperature in the evaporator (5 K below the 40 degC injection limit)
+        T_cond = 80       # degC, saturation temperature in the condenser
+    elif mode == 'pinch_in':
+        pinch_ev = pinches["pinch_ev"] # K
+        pinch_cd = pinches["pinch_cd"]  # K
+
     superheat = 5     # K, suction superheat (dry-compression margin)
     subcool = 3        # K, liquid subcooling ahead of the expansion valve
     
-    # if selected_fluid != 'R1233zd(E)':
-    #     p_evap = fluid_from_wrapper.p_dew(T_evap+273.15)/1e5
-    #     p_cond = fluid_from_wrapper.p_bubble(T_cond+273.15)/1e5
-    # else:
-    #     p_evap = PropsSI('P', 'T', T_evap + 273.15, 'Q', 1, FLUID) / 1e5   # bar
-    #     p_cond = PropsSI('P', 'T', T_cond + 273.15, 'Q', 0, FLUID) / 1e5   # bar
+    if mode == 'base':
+        if selected_fluid != 'R1233zd(E)':
+            p_evap = fluid_from_wrapper.p_dew(T_evap+273.15)/1e5
+            p_cond = fluid_from_wrapper.p_bubble(T_cond+273.15)/1e5
+        else:
+            p_evap = PropsSI('P', 'T', T_evap + 273.15, 'Q', 1, FLUID) / 1e5   # bar
+            p_cond = PropsSI('P', 'T', T_cond + 273.15, 'Q', 0, FLUID) / 1e5   # bar
     
     # print(f'p_evap = {p_evap:.3f} bar, p_cond = {p_cond:.3f} bar, pr = {p_cond / p_evap:.2f}')
     
@@ -152,10 +157,17 @@ def overall(selected_fluid):
     
     
     
-    # b01.set_attr(p=p_evap, td_dew=superheat)   # mass flow left FREE (result)
-    # b02.set_attr(p=p_cond)
-    lt_evaporator.set_attr(td_pinch = pinch_ev)
-    lt_condenser.set_attr(td_pinch = pinch_cd)
+    if mode == 'base':
+        b01.set_attr(p=p_evap, td_dew=superheat)   # mass flow left FREE (result)
+        b02.set_attr(p=p_cond)
+    elif mode == 'pinch_in':
+        lt_evaporator.set_attr(td_pinch = pinch_ev)
+        lt_condenser.set_attr(td_pinch = pinch_cd)
+    elif mode == "UA_in":
+        UA_ev = UAs["UA_ev"]
+        UA_cd = UAs["UA_cd"]
+        lt_evaporator.set_attr(UA = UA_ev)
+        lt_condenser.set_attr(UA = UA_cd)
     b01.set_attr(td_dew=superheat)   # mass flow left FREE (result)
     b03.set_attr(td_bubble=subcool)
     
@@ -341,4 +353,7 @@ def overall(selected_fluid):
     
     print(f"cd_pinch = {lt_condenser.td_pinch.val}")
     
-    return nw, COP, UA_ev, UA_cd
+    pinch_ev = lt_evaporator.td_pinch.val
+    pinch_cd = lt_condenser.td_pinch.val
+    
+    return nw, COP, UA_ev, UA_cd, pinch_ev, pinch_cd
