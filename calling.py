@@ -18,10 +18,15 @@ npz_file_names = [
     if file.is_file()
 ]
 
+# CYCLOPEN_BUTANE_mass_0.25_0.75.npz
+
 # print(npz_file_names)
 
 
-selected_fluid = 'R1233zd(E)'
+# selected_fluid = 'R1233zd(E)'
+
+
+selected_fluid = 'CYCLOPEN_BUTANE_mass_0.25_0.75'
 
 cycle = overall(selected_fluid)
 
