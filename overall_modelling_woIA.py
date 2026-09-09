@@ -84,13 +84,20 @@ def overall(selected_fluid):
     
     
     FLUID = selected_fluid
+    
+    fluid_from_wrapper = TabularMixtureWrapper(fluid=selected_fluid,
+    path= f"tables/{selected_fluid}.npz"
+    )
+    
     T_evap = 35       # degC, saturation temperature in the evaporator (5 K below the 40 degC injection limit)
     T_cond = 80       # degC, saturation temperature in the condenser
     superheat = 5     # K, suction superheat (dry-compression margin)
     subcool = 3        # K, liquid subcooling ahead of the expansion valve
     
-    p_evap = PropsSI('P', 'T', T_evap + 273.15, 'Q', 1, FLUID) / 1e5   # bar
-    p_cond = PropsSI('P', 'T', T_cond + 273.15, 'Q', 0, FLUID) / 1e5   # bar
+    p_evap = fluid_from_wrapper.p_dew(T_evap+273.15)/1e5
+    p_cond = fluid_from_wrapper.p_bubble(T_cond+273.15)/1e5
+    # p_evap = PropsSI('P', 'T', T_evap + 273.15, 'Q', 1, FLUID) / 1e5   # bar
+    # p_cond = PropsSI('P', 'T', T_cond + 273.15, 'Q', 0, FLUID) / 1e5   # bar
     
     print(f'p_evap = {p_evap:.3f} bar, p_cond = {p_cond:.3f} bar, pr = {p_cond / p_evap:.2f}')
     
