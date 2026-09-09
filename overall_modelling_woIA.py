@@ -142,7 +142,7 @@ def overall(selected_fluid):
         fluid={"MyMixture": 1},
         fluid_engines={"MyMixture": TabularMixtureWrapper},
         fluid_wrapper_kwargs={
-            "MyMixture": {"path": "selected_fluid.npz"}
+            "MyMixture": {"path": f"tables/{selected_fluid}.npz"}
         })
     
     
@@ -235,9 +235,9 @@ def overall(selected_fluid):
         return T, s
     
     
-    
-    T_crit = PropsSI('Tcrit', FLUID)
-    T_dome = np.linspace(280, T_crit - 0.3, 200)
+    T_crit = fluid_from_wrapper._T_crit
+    # T_crit = PropsSI('Tcrit', FLUID)
+    T_dome = np.linspace(280, T_crit - 1.5, 200)
     
     sf = np.zeros(len(T_dome))
     sg = np.zeros(len(T_dome))
