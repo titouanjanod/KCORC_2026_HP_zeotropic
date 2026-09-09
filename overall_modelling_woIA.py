@@ -85,21 +85,26 @@ def overall(selected_fluid):
     
     FLUID = selected_fluid
     
-    fluid_from_wrapper = TabularMixtureWrapper(fluid=selected_fluid,
-    path= f"tables/{selected_fluid}.npz"
-    )
+    if FLUID != 'R1233zd(E)':
+        fluid_from_wrapper = TabularMixtureWrapper(fluid=selected_fluid,
+        path= f"tables/{selected_fluid}.npz"
+        )
     
-    T_evap = 35       # degC, saturation temperature in the evaporator (5 K below the 40 degC injection limit)
-    T_cond = 80       # degC, saturation temperature in the condenser
+    pinch_ev = 5 # K
+    pinch_cd = 5  # K
+    # T_evap = 35       # degC, saturation temperature in the evaporator (5 K below the 40 degC injection limit)
+    # T_cond = 80       # degC, saturation temperature in the condenser
     superheat = 5     # K, suction superheat (dry-compression margin)
     subcool = 3        # K, liquid subcooling ahead of the expansion valve
     
-    p_evap = fluid_from_wrapper.p_dew(T_evap+273.15)/1e5
-    p_cond = fluid_from_wrapper.p_bubble(T_cond+273.15)/1e5
-    # p_evap = PropsSI('P', 'T', T_evap + 273.15, 'Q', 1, FLUID) / 1e5   # bar
-    # p_cond = PropsSI('P', 'T', T_cond + 273.15, 'Q', 0, FLUID) / 1e5   # bar
+    # if selected_fluid != 'R1233zd(E)':
+    #     p_evap = fluid_from_wrapper.p_dew(T_evap+273.15)/1e5
+    #     p_cond = fluid_from_wrapper.p_bubble(T_cond+273.15)/1e5
+    # else:
+    #     p_evap = PropsSI('P', 'T', T_evap + 273.15, 'Q', 1, FLUID) / 1e5   # bar
+    #     p_cond = PropsSI('P', 'T', T_cond + 273.15, 'Q', 0, FLUID) / 1e5   # bar
     
-    print(f'p_evap = {p_evap:.3f} bar, p_cond = {p_cond:.3f} bar, pr = {p_cond / p_evap:.2f}')
+    # print(f'p_evap = {p_evap:.3f} bar, p_cond = {p_cond:.3f} bar, pr = {p_cond / p_evap:.2f}')
     
     
     
@@ -147,8 +152,11 @@ def overall(selected_fluid):
     
     
     
-    b01.set_attr(p=p_evap, td_dew=superheat)   # mass flow left FREE (result)
-    b02.set_attr(p=p_cond)
+    # b01.set_attr(p=p_evap, td_dew=superheat)   # mass flow left FREE (result)
+    # b02.set_attr(p=p_cond)
+    lt_evaporator.set_attr(td_pinch = pinch_ev)
+    lt_condenser.set_attr(td_pinch = pinch_cd)
+    b01.set_attr(td_dew=superheat)   # mass flow left FREE (result)
     b03.set_attr(td_bubble=subcool)
     
     
@@ -156,30 +164,30 @@ def overall(selected_fluid):
     """11"""
     
     nw.solve('design')
-    nw.print_results()
+    # nw.print_results()
     
     
     
     """12"""
     
-    print('Refrigerant (R1233zd(E)) mass flow rate:', round(b01.m.val, 3), 'kg/s')
-    print('District-heating mass flow rate (RESULT):', round(d01.m.val, 2), 'kg/s')
-    print()
-    print(f"{'Component':<15}{'ttd_u [K]':>12}{'ttd_l [K]':>12}")
-    for hx in [lt_evaporator, lt_condenser]:
-        flag_u = '  <-- violation!' if hx.ttd_u.val < 0 else ''
-        flag_l = '  <-- violation!' if hx.ttd_l.val < 0 else ''
-        print(f"{hx.label:<15}{hx.ttd_u.val:>12.2f}{hx.ttd_l.val:>12.2f}"
-              f"{flag_u if hx.ttd_u.val < 0 else flag_l}")
+    # print('Refrigerant (R1233zd(E)) mass flow rate:', round(b01.m.val, 3), 'kg/s')
+    # print('District-heating mass flow rate (RESULT):', round(d01.m.val, 2), 'kg/s')
+    # print()
+    # print(f"{'Component':<15}{'ttd_u [K]':>12}{'ttd_l [K]':>12}")
+    # for hx in [lt_evaporator, lt_condenser]:
+    #     flag_u = '  <-- violation!' if hx.ttd_u.val < 0 else ''
+    #     flag_l = '  <-- violation!' if hx.ttd_l.val < 0 else ''
+    #     print(f"{hx.label:<15}{hx.ttd_u.val:>12.2f}{hx.ttd_l.val:>12.2f}"
+    #           f"{flag_u if hx.ttd_u.val < 0 else flag_l}")
     
-    if b02.x.val < 1:
-        print()
-        print(f'NOTE: compressor discharge quality x = {b02.x.val:.3f} (< 1) -- wet compression. '
-              'Increase `superheat` in Section 7 and re-run from there.')
-    else:
-        print()
-        print(f'Discharge is dry (T={b02.T.val:.1f} degC vs. T_cond={T_cond} degC, '
-              f'{b02.T.val - T_cond:.1f} K of superheat at the outlet).')
+    # if b02.x.val < 1:
+    #     print()
+    #     print(f'NOTE: compressor discharge quality x = {b02.x.val:.3f} (< 1) -- wet compression. '
+    #           'Increase `superheat` in Section 7 and re-run from there.')
+    # else:
+    #     print()
+        # print(f'Discharge is dry (T={b02.T.val:.1f} degC vs. T_cond={T_cond} degC, '
+        #       f'{b02.T.val - T_cond:.1f} K of superheat at the outlet).')
     
     
     
@@ -194,16 +202,16 @@ def overall(selected_fluid):
     COP = Q_useful / P_comp
     pr = b02.p.val / b01.p.val
     
-    print('================ LT LOOP SUMMARY ================')
-    print(f'Refrigerant                  : {FLUID}')
-    print(f'Refrigerant mass flow rate   : {b01.m.val:8.2f} kg/s')
-    print(f'Pressure ratio                : {pr:8.2f}')
-    print(f'Isentropic efficiency         : {lt_compressor.eta_s.val * 100:8.2f} %')
-    print(f'Compressor discharge temp.    : {b02.T.val:8.1f} degC')
-    print(f'Compressor power              : {P_comp:8.1f} kW')
-    print(f'Evaporator duty               : {-Q_evap:8.1f} kW')
-    print(f'Condenser duty                : {Q_useful:8.1f} kW')
-    print(f'COP (LT loop only)            : {COP:8.2f}')
+    # print('================ LT LOOP SUMMARY ================')
+    # print(f'Refrigerant                  : {FLUID}')
+    # print(f'Refrigerant mass flow rate   : {b01.m.val:8.2f} kg/s')
+    # print(f'Pressure ratio                : {pr:8.2f}')
+    # print(f'Isentropic efficiency         : {lt_compressor.eta_s.val * 100:8.2f} %')
+    # print(f'Compressor discharge temp.    : {b02.T.val:8.1f} degC')
+    # print(f'Compressor power              : {P_comp:8.1f} kW')
+    # print(f'Evaporator duty               : {-Q_evap:8.1f} kW')
+    # print(f'Condenser duty                : {Q_useful:8.1f} kW')
+    # print(f'COP (LT loop only)            : {COP:8.2f}')
     
     
     
@@ -328,5 +336,9 @@ def overall(selected_fluid):
     
     UA_cd = lt_condenser.UA.val
 
-
+    
+    print(f"ev_pinch = {lt_evaporator.td_pinch.val}")
+    
+    print(f"cd_pinch = {lt_condenser.td_pinch.val}")
+    
     return nw, COP, UA_ev, UA_cd
