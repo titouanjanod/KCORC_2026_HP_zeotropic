@@ -1,3 +1,18 @@
+from pathlib import Path
+
+tables_folder = Path("tables")
+
+npz_file_names = [
+    file.stem
+    for file in tables_folder.glob("*.npz")
+    if file.is_file()
+]
+
+print(npz_file_names)
+
+
+
+
 """Two-loop heat pump converted from LT_HT_complete_HeatPump_R1233zdE_Series_GroupB.ipynb.
 
 Refrigerant properties come exclusively from the selected NPZ table using
