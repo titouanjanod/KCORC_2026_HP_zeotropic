@@ -7,10 +7,19 @@ Created on Wed Sep  9 16:04:46 2026
 
 from overall_modelling_woIA import overall
 
-def get_name_fluids():
-    all_fluids = 1 
-    
-    return all_fluids
+
+
+from pathlib import Path
+
+tables_folder = Path("tables")
+npz_file_names = [
+    file.stem
+    for file in tables_folder.glob("*.npz")
+    if file.is_file()
+]
+
+# print(npz_file_names)
+
 
 selected_fluid = 'R1233zd(E)'
 
