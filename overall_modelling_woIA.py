@@ -215,23 +215,38 @@ def overall(selected_fluid):
     def conn_Ts(conn):
         p_Pa = conn.p.val * 1e5
         h_Jkg = conn.h.val * 1e3
-        T = PropsSI('T', 'P', p_Pa, 'H', h_Jkg, FLUID) - 273.15
-        s = PropsSI('S', 'P', p_Pa, 'H', h_Jkg, FLUID) / 1e3
+        
+        
+        T = fluid_from_wrapper.T_ph(p_Pa, h_Jkg) - 273.15
+        s = fluid_from_wrapper.s_ph(p_Pa, h_Jkg) /1e3
+        # T = PropsSI('T', 'P', p_Pa, 'H', h_Jkg, FLUID) - 273.15
+        # s = PropsSI('S', 'P', p_Pa, 'H', h_Jkg, FLUID) / 1e3
         return T, s
     
     
     def isobar_Ts(p_bar, h1_kJkg, h2_kJkg, n=40):
         p_Pa = p_bar * 1e5
         hs = np.linspace(h1_kJkg, h2_kJkg, n) * 1e3
-        T = PropsSI('T', 'P', p_Pa, 'H', hs, FLUID) - 273.15
-        s = PropsSI('S', 'P', p_Pa, 'H', hs, FLUID) / 1e3
+        
+        T = fluid_from_wrapper.T_ph(p_Pa, hs) - 273.15
+        s = fluid_from_wrapper.s_ph(p_Pa, hs) /1e3
+        # T = PropsSI('T', 'P', p_Pa, 'H', hs, FLUID) - 273.15
+        # s = PropsSI('S', 'P', p_Pa, 'H', hs, FLUID) / 1e3
         return T, s
+    
     
     
     T_crit = PropsSI('Tcrit', FLUID)
     T_dome = np.linspace(280, T_crit - 0.3, 200)
-    sf = PropsSI('S', 'T', T_dome, 'Q', 0, FLUID) / 1e3
-    sg = PropsSI('S', 'T', T_dome, 'Q', 1, FLUID) / 1e3
+    
+    sf = np.zeros(len(T_dome))
+    sg = np.zeros(len(T_dome))
+    for T_d in T_dome:
+        sf = fluid_from_wrapper.s_QT(0, T_d) /1e3
+        sg = fluid_from_wrapper.s_QT(1, T_d) /1e3
+    
+    # sf = PropsSI('S', 'T', T_dome, 'Q', 0, FLUID) / 1e3
+    # sg = PropsSI('S', 'T', T_dome, 'Q', 1, FLUID) / 1e3
     T_dome_C = T_dome - 273.15
     
     fig, ax = plt.subplots(figsize=(7, 5.5))
@@ -273,6 +288,8 @@ def overall(selected_fluid):
         h_hot = h_hot_out + Q / m_hot
         p_cold = np.linspace(p_cold_in_bar, p_cold_out_bar, n) * 1e5
         p_hot = np.linspace(p_hot_out_bar, p_hot_in_bar, n) * 1e5
+        
+        
         T_cold = PropsSI('T', 'P', p_cold, 'H', h_cold * 1e3, fluid_cold) - 273.15
         T_hot = PropsSI('T', 'P', p_hot, 'H', h_hot * 1e3, fluid_hot) - 273.15
         return Q, T_hot, T_cold
