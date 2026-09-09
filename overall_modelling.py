@@ -2,7 +2,8 @@
 
 Refrigerant properties come exclusively from the selected NPZ table using
 TabularMixtureWrapper; CoolProp is used only for water.
-Default: 50/50 isopentane/isobutane by mass, in both independent loops.
+Default: run every NPZ table in the adjacent tables folder and save one summary.
+Each case uses the same composition in both independent loops.
 Retains notebook design assumptions: evaporation temperatures are DEW points
 (35/45 C), condensation temperatures are BUBBLE points (80/95 C).
 Superheat is relative to dew; subcooling is relative to bubble.
@@ -10,12 +11,15 @@ These fixed conditions are not an optimization for the selected mixture.
 A converged solution must still have positive exchanger pinch differences.
 
 Run with the workshop Python environment:
-    python LT_HT_complete_HeatPump_Mixture_Series_GroupB.py --no-show
+    python LT_HT_complete_HeatPump_Mixture_Series_GroupB.py
     python LT_HT_complete_HeatPump_Mixture_Series_GroupB.py --table Isopentane_Isobutane_mass_0.30_0.70.npz
-    python LT_HT_complete_HeatPump_Mixture_Series_GroupB.py --no-show --output-dir results
+    python LT_HT_complete_HeatPump_Mixture_Series_GroupB.py --plots
 
-Relative table filenames resolve against the tables directory beside this script,
-independent of the current working directory. Absolute table paths also work.
+Default output: mixture_summary.npz beside this script.
+All relative input/output paths resolve from the script directory.
+--table selects one case; omission runs all provided tables.
+--plots saves per-case PNGs; batch execution never opens plot windows.
+The archive contains numeric/string arrays and JSON schema metadata, without pickle.
 Requires tespy, CoolProp, numpy, scipy and matplotlib. REFPROP is not required.
 """
 # ---1_Imports---
@@ -24,17 +28,7 @@ import json
 from pathlib import Path
 
 
-def main():
-    # ---1a_Command_line_options_and_plot_backend---
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('--table', type=Path, default=Path('Isopentane_Isobutane_mass_0.50_0.50.npz'))
-    parser.add_argument('--no-show', action='store_true', help='Run without opening plot windows.')
-    parser.add_argument('--output-dir', type=Path, help='Optional directory for T-s and T-Q PNG plots.')
-    args = parser.parse_args()
-    if args.no_show:
-        import matplotlib
-        matplotlib.use('Agg')
-
+def run_case(args):
     # ---1b_Model_and_property_imports---
     from tespy.networks import Network
     from tespy.components import (
@@ -122,7 +116,7 @@ def main():
     if not table_path.is_file():
         raise FileNotFoundError(f'Mixture table not found: {table_path}')
     wrapper = TabularMixtureWrapper(FLUID, path=str(table_path))
-    with np.load(table_path) as data:
+    with np.load(table_path, allow_pickle=False) as data:
         meta = json.loads(str(data['metadata']))
         dome_Tb = data['sat_T_bubble'].copy()
         dome_Td = data['sat_T_dew'].copy()
@@ -132,7 +126,7 @@ def main():
     print(f'Composition: {meta["fractions"]} ({meta["mixture_type"]})')
 
     # All refrigerant property calls use the supplied table. CoolProp is water-only.
-    def PropsSI(output, key1, value1, key2, value2, fluid):
+    def fluid_property(output, key1, value1, key2, value2, fluid):
         if fluid == 'water':
             return water_props(output, key1, value1, key2, value2, fluid)
         if fluid != FLUID:
@@ -153,10 +147,10 @@ def main():
     T_evap, T_cond, superheat, subcool = 35, 80, 5, 3          # LT loop
     ht_T_evap, ht_T_cond, ht_superheat, ht_subcool = 45, 95, 5, 5   # HT loop
 
-    p_evap = PropsSI('P', 'T', T_evap + 273.15, 'Q', 1, FLUID) / 1e5
-    p_cond = PropsSI('P', 'T', T_cond + 273.15, 'Q', 0, FLUID) / 1e5
-    ht_p_evap = PropsSI('P', 'T', ht_T_evap + 273.15, 'Q', 1, FLUID) / 1e5
-    ht_p_cond = PropsSI('P', 'T', ht_T_cond + 273.15, 'Q', 0, FLUID) / 1e5
+    p_evap = fluid_property('P', 'T', T_evap + 273.15, 'Q', 1, FLUID) / 1e5
+    p_cond = fluid_property('P', 'T', T_cond + 273.15, 'Q', 0, FLUID) / 1e5
+    ht_p_evap = fluid_property('P', 'T', ht_T_evap + 273.15, 'Q', 1, FLUID) / 1e5
+    ht_p_cond = fluid_property('P', 'T', ht_T_cond + 273.15, 'Q', 0, FLUID) / 1e5
 
     print(f'LT: p_evap = {p_evap:.3f} bar, p_cond = {p_cond:.3f} bar, pr = {p_cond / p_evap:.2f}')
     print(f'HT: p_evap = {ht_p_evap:.3f} bar, p_cond = {ht_p_cond:.3f} bar, pr = {ht_p_cond / ht_p_evap:.2f}')
@@ -196,6 +190,37 @@ def main():
     if not nw.converged:
         raise RuntimeError('TESPy design calculation did not converge.')
     nw.print_results()
+
+    # ---11_Wrapper_integration_verification---
+    # Verify the actual engines propagated by TESPy, not just the input settings.
+    refrigerant_connections = (b01,b02,b03,b04,b05,c01,c02,c03,c04,c05)
+    for conn in refrigerant_connections:
+        engine = conn.fluid.wrapper.get(FLUID)
+        if not isinstance(engine, TabularMixtureWrapper):
+            raise RuntimeError(f'{conn.label}: TESPy is not using TabularMixtureWrapper.')
+        if Path(engine.path).resolve() != table_path:
+            raise RuntimeError(f'{conn.label}: TESPy is using the wrong mixture table.')
+        if not np.allclose(engine.fractions, meta['fractions'], rtol=0, atol=1e-12):
+            raise RuntimeError(f'{conn.label}: mixture composition does not match the table.')
+        # TESPy display units: bar, kJ/kg, C. Wrapper units: Pa, J/kg, K.
+        p_si, h_si = conn.p.val*1e5, conn.h.val*1e3
+        if not np.isclose(conn.T.val+273.15, wrapper.T_ph(p_si,h_si), atol=1e-5, rtol=0):
+            raise RuntimeError(f'{conn.label}: TESPy and table temperatures disagree.')
+        if not np.isclose(conn.x.val, wrapper.Q_ph(p_si,h_si), atol=1e-6, rtol=0):
+            raise RuntimeError(f'{conn.label}: TESPy and table vapor qualities disagree.')
+    for inlet,outlet,liquid,sh,sc in [
+        (b01,b02,b03,superheat,subcool),
+        (c01,c02,c03,ht_superheat,ht_subcool)]:
+        np.testing.assert_allclose(inlet.T.val+273.15,
+            wrapper.T_dew(inlet.p.val*1e5)+sh, atol=1e-5, rtol=0)
+        np.testing.assert_allclose(liquid.T.val+273.15,
+            wrapper.T_bubble(liquid.p.val*1e5)-sc, atol=1e-5, rtol=0)
+        h_ideal=wrapper.isentropic(inlet.p.val*1e5,inlet.h.val*1e3,outlet.p.val*1e5)
+        np.testing.assert_allclose(outlet.h.val*1e3,
+            inlet.h.val*1e3+(h_ideal-inlet.h.val*1e3)/0.75, atol=1e-3, rtol=1e-8)
+    print('Wrapper integration verified: all 10 refrigerant connections, table path, '
+          'composition, SI conversions, dew/bubble offsets and isentropic compression.')
+
     # ---11a_Table_range_and_temperature_glide_checks---
     for conn in (b01, b02, b03, b04, c01, c02, c03, c04):
         region, logp, sigma = wrapper._locate(conn.p.val * 1e5, conn.h.val * 1e3)
@@ -266,21 +291,74 @@ def main():
     print(f'Overall COP                    : {COP_overall:8.2f}')
 
 
+
+    # ---13a_Collect_plotting_data_and_case_results---
+    connections = [a01, a02, a03, b01, b02, b03, b04, b05,
+                   c01, c02, c03, c04, c05, d01, d02, d03]
+    exchangers = [lt_evaporator, lt_condenser, ht_evaporator, ht_condenser]
+    state = np.array([[c.m.val, c.p.val, c.h.val, c.T.val, c.x.val,
+                       (wrapper.s_ph(c.p.val*1e5, c.h.val*1e3) if c in
+                        [b01,b02,b03,b04,b05,c01,c02,c03,c04,c05] else
+                        water_props('S','P',c.p.val*1e5,'H',c.h.val*1e3,'water'))/1e3]
+                      for c in connections])
+    hx_results = np.array([[abs(hx.Q.val), hx.UA.val, hx.td_pinch.val,
+                            hx.ttd_u.val, hx.ttd_l.val] for hx in exchangers])
+    metrics = np.array([COP_overall, -Q_LT_cond/P_LT, -Q_HT_cond/P_HT,
+                        P_total, P_LT, P_HT, Q_useful, -Q_LT_cond, -Q_HT_cond,
+                        -Q_LT_evap, -Q_HT_evap, b01.m.val, c01.m.val,
+                        d01.m.val, d02.T.val, sum(hx.UA.val for hx in exchangers)])
+    profiles = []
+    for hot_in, hot_out, cold_in, cold_out, hot_fluid, cold_fluid in [
+        (a02,a03,b04,b01,'water',FLUID), (b02,b03,d01,d02,FLUID,'water'),
+        (a01,a02,c04,c01,'water',FLUID), (c02,c03,d02,d03,FLUID,'water')]:
+        q = np.linspace(0, cold_in.m.val*(cold_out.h.val-cold_in.h.val), 200)
+        hh = hot_out.h.val+q/hot_in.m.val
+        hc = cold_in.h.val+q/cold_in.m.val
+        th = fluid_property('T','P',hot_in.p.val*1e5,'H',hh*1e3,hot_fluid)-273.15
+        tc = fluid_property('T','P',cold_in.p.val*1e5,'H',hc*1e3,cold_fluid)-273.15
+        profiles.append(np.column_stack([q,th,tc]))
+    cycles = []
+    for states in [(b01,b02,b03,b04),(c01,c02,c03,c04)]:
+        curves = []
+        for i,j in [(0,1),(1,2),(2,3),(3,0)]:
+            ci,cj = states[i], states[j]
+            h = np.linspace(ci.h.val,cj.h.val,100)*1e3
+            pressure = np.linspace(ci.p.val,cj.p.val,100)*1e5
+            # Compression and throttling paths are endpoint illustrations.
+            curves.append(np.column_stack([
+                np.linspace(ci.T.val,cj.T.val,100) if i in (0,2) else
+                fluid_property('T','P',pressure,'H',h,FLUID)-273.15,
+                np.linspace(wrapper.s_ph(ci.p.val*1e5,ci.h.val*1e3),
+                            wrapper.s_ph(cj.p.val*1e5,cj.h.val*1e3),100)/1e3 if i in (0,2) else
+                fluid_property('S','P',pressure,'H',h,FLUID)/1e3]))
+        cycles.append(curves)
+    wet = bool(b02.x.val < 1-1e-6 or c02.x.val < 1-1e-6)
+    crossover = bool(np.min(hx_results[:,2]) <= 0 or
+                     any(np.min(pr[:,1]-pr[:,2]) <= 0 for pr in profiles))
+    if not np.isfinite(metrics).all() or not np.isfinite(state).all():
+        raise ValueError('Non-finite solved results.')
+    result = dict(metrics=metrics, states=state, heat_exchangers=hx_results,
+                  tq_profiles=np.array(profiles), ts_cycles=np.array(cycles),
+                  wet_discharge=wet, temperature_crossover=crossover,
+                  passes_checks=not (wet or crossover))
+    if not args.plots:
+        return result
+
     # ---14_T_s_diagram_and_T_Q_diagrams---
     # ---14a_T_s_diagram---
     def conn_Ts(conn):
         p_Pa = conn.p.val * 1e5
         h_Jkg = conn.h.val * 1e3
-        T = PropsSI('T', 'P', p_Pa, 'H', h_Jkg, FLUID) - 273.15
-        s = PropsSI('S', 'P', p_Pa, 'H', h_Jkg, FLUID) / 1e3
+        T = fluid_property('T', 'P', p_Pa, 'H', h_Jkg, FLUID) - 273.15
+        s = fluid_property('S', 'P', p_Pa, 'H', h_Jkg, FLUID) / 1e3
         return T, s
 
 
     def isobar_Ts(p_bar, h1_kJkg, h2_kJkg, n=40):
         p_Pa = p_bar * 1e5
         hs = np.linspace(h1_kJkg, h2_kJkg, n) * 1e3
-        T = PropsSI('T', 'P', p_Pa, 'H', hs, FLUID) - 273.15
-        s = PropsSI('S', 'P', p_Pa, 'H', hs, FLUID) / 1e3
+        T = fluid_property('T', 'P', p_Pa, 'H', hs, FLUID) - 273.15
+        s = fluid_property('S', 'P', p_Pa, 'H', hs, FLUID) / 1e3
         return T, s
 
 
@@ -329,8 +407,8 @@ def main():
         h_hot = h_hot_out + Q / m_hot
         p_cold = np.linspace(p_cold_in_bar, p_cold_out_bar, n) * 1e5
         p_hot = np.linspace(p_hot_out_bar, p_hot_in_bar, n) * 1e5
-        T_cold = PropsSI('T', 'P', p_cold, 'H', h_cold * 1e3, fluid_cold) - 273.15
-        T_hot = PropsSI('T', 'P', p_hot, 'H', h_hot * 1e3, fluid_hot) - 273.15
+        T_cold = fluid_property('T', 'P', p_cold, 'H', h_cold * 1e3, fluid_cold) - 273.15
+        T_hot = fluid_property('T', 'P', p_hot, 'H', h_hot * 1e3, fluid_hot) - 273.15
         return Q, T_hot, T_cold
 
 
@@ -378,6 +456,110 @@ def main():
         plt.show()
     else:
         plt.close(fig)
+
+    return result
+
+
+# ---15_Batch_execution_and_summary_export---
+def main():
+    import contextlib
+    import io
+    import numpy as np
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    base = Path(__file__).resolve().parent
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('--table', type=Path, help='Optional single table filename.')
+    parser.add_argument('--tables-dir', type=Path, default=Path('tables'))
+    parser.add_argument('--summary', type=Path, default=Path('mixture_summary.npz'))
+    parser.add_argument('--plots', action='store_true', help='Save per-case plots.')
+    parser.add_argument('--output-dir', type=Path, default=Path('mixture_plots'))
+    parser.add_argument('--no-show', action='store_true', help='Compatibility option; runs are always headless.')
+    args = parser.parse_args()
+    def relative(path):
+        return path if path.is_absolute() else base / path
+    tables_dir = relative(args.tables_dir)
+    tables = [args.table if args.table.is_absolute() else tables_dir/args.table] if args.table else sorted(tables_dir.glob('*.npz'))
+    if not tables:
+        parser.error(f'No NPZ tables found in {tables_dir}')
+    destination = relative(args.summary)
+    if destination.resolve() in [f.resolve() for f in tables]:
+        parser.error('Summary output must not overwrite an input table.')
+    metric_names = ['cop_total','cop_lt','cop_ht','power_total_kw','power_lt_kw','power_ht_kw',
+                    'heat_total_kw','heat_lt_kw','heat_ht_kw','source_lt_kw','source_ht_kw',
+                    'mass_lt_kg_s','mass_ht_kg_s','mass_dh_kg_s','temperature_dh_intermediate_c','ua_total_w_k']
+    shapes = dict(metrics=(16,),states=(16,6),heat_exchangers=(4,5),
+                  tq_profiles=(4,200,3),ts_cycles=(2,4,100,2))
+    arrays = {key:np.full((len(tables),)+shape,np.nan) for key,shape in shapes.items()}
+    status=[]; errors=[]; logs=[]; families=[]; compositions=[]; metadata=[]
+    converged=[]; passes=[]; wet=[]; cross=[]
+    for i,table in enumerate(tables):
+        print(f'[{i+1}/{len(tables)}] {table.name}', flush=True)
+        family = table.stem.split('_mass_')[0]
+        families.append(family)
+        buffer=io.StringIO()
+        table_meta={}
+        try:
+            with np.load(table, allow_pickle=False) as data:
+                table_meta=json.loads(str(data['metadata']))
+            compositions.append(table_meta.get('fractions',[]))
+            case_args=argparse.Namespace(table=table.resolve(), no_show=True,
+                plots=args.plots, output_dir=relative(args.output_dir)/table.stem)
+            with contextlib.redirect_stdout(buffer), contextlib.redirect_stderr(buffer):
+                result=run_case(case_args)
+            for key in shapes:
+                arrays[key][i]=result[key]
+            converged.append(True)
+            passes.append(result['passes_checks'])
+            wet.append(result['wet_discharge'])
+            cross.append(result['temperature_crossover'])
+            status.append('ok' if result['passes_checks'] else 'warning')
+            errors.append('')
+            print(f'  {status[-1]}: COP={result["metrics"][0]:.3f}', flush=True)
+        except Exception as exc:
+            if len(compositions) <= i:
+                compositions.append(table_meta.get('fractions',[]))
+            converged.append(False); passes.append(False); wet.append(False); cross.append(False)
+            status.append('failed'); errors.append(f'{type(exc).__name__}: {exc}')
+            print(f'  failed: {errors[-1]}', flush=True)
+        finally:
+            plt.close('all')
+            logs.append(buffer.getvalue())
+            metadata.append(json.dumps(table_meta))
+    max_components=max(2,max(map(len,compositions)))
+    fractions=np.full((len(tables),max_components),np.nan)
+    for i,values in enumerate(compositions):
+        fractions[i,:len(values)]=values
+    schema = {
+        'schema_version':1, 'case_axis':'Every result array first dimension matches table_files.',
+        'failed_cases':'Numeric results are NaN; see status and errors. Check converged before interpreting flags.',
+        'passes_checks':'Converged, finite exported states/metrics, solved states within table bounds, positive pinch, dry compressor discharge. Not a complete engineering validation.',
+        'fractions':'Component order follows table family name; fraction basis is in table_metadata_json.',
+        'states_columns':['mass_kg_s','pressure_bar','enthalpy_kj_kg','temperature_c','quality','entropy_kj_kg_k'],
+        'heat_exchangers_columns':['heat_kw','ua_w_k','pinch_k','ttd_u_k','ttd_l_k'],
+        'tq_profiles_columns':['heat_kw','hot_temperature_c','cold_temperature_c'],
+        'ts_cycles_columns':['temperature_c','entropy_kj_kg_k'],
+        'ts_cycles_axes':['case','loop LT/HT','segment 1-2/2-3/3-4/4-1','sample','property'],
+        'ts_cycle_note':'Compression and expansion are straight endpoint illustrations, not resolved process paths.',
+        'design':{'evaporation_dew_c':[35,45],'condensation_bubble_c':[80,95],
+                  'superheat_k':[5,5],'subcooling_k':[3,5],'eta_s':0.75,
+                  'geo_temperatures_c':[60,50,40],'geo_mass_kg_s':100,'dh_endpoints_c':[60,90],
+                  'same_composition_both_loops':True,'fixed_ua':False}
+    }
+    destination.parent.mkdir(parents=True,exist_ok=True)
+    with destination.open('wb') as handle:
+        np.savez_compressed(handle, **arrays, table_files=np.array([t.name for t in tables]),
+            family=np.array(families), fractions=fractions, status=np.array(status),
+            errors=np.array(errors), converged=np.array(converged), passes_checks=np.array(passes),
+            wet_discharge=np.array(wet),temperature_crossover=np.array(cross),
+            metric_names=np.array(metric_names),
+            connection_labels=np.array(['a01','a02','a03','b01','b02','b03','b04','b05','c01','c02','c03','c04','c05','d01','d02','d03']),
+            heat_exchanger_labels=np.array(['LT-evaporator','LT-condenser','HT-evaporator','HT-condenser']),
+            table_metadata_json=np.array(metadata), run_logs=np.array(logs),
+            schema_json=np.array(json.dumps(schema,indent=2)))
+    print(f'Saved {destination}: {sum(converged)}/{len(tables)} completed; {sum(passes)} passed checks.')
+
 
 # ---Script_entry_point---
 if __name__ == '__main__':
