@@ -212,115 +212,117 @@ def overall(selected_fluid):
     """14 : T s diagram"""
     
     
-    def conn_Ts(conn):
-        p_Pa = conn.p.val * 1e5
-        h_Jkg = conn.h.val * 1e3
+    # def conn_Ts(conn):
+    #     p_Pa = conn.p.val * 1e5
+    #     h_Jkg = conn.h.val * 1e3
         
         
-        T = fluid_from_wrapper.T_ph(p_Pa, h_Jkg) - 273.15
-        s = fluid_from_wrapper.s_ph(p_Pa, h_Jkg) /1e3
-        # T = PropsSI('T', 'P', p_Pa, 'H', h_Jkg, FLUID) - 273.15
-        # s = PropsSI('S', 'P', p_Pa, 'H', h_Jkg, FLUID) / 1e3
-        return T, s
+    #     T = fluid_from_wrapper.T_ph(p_Pa, h_Jkg) - 273.15
+    #     s = fluid_from_wrapper.s_ph(p_Pa, h_Jkg) /1e3
+    #     # T = PropsSI('T', 'P', p_Pa, 'H', h_Jkg, FLUID) - 273.15
+    #     # s = PropsSI('S', 'P', p_Pa, 'H', h_Jkg, FLUID) / 1e3
+    #     return T, s
     
     
-    def isobar_Ts(p_bar, h1_kJkg, h2_kJkg, n=40):
-        p_Pa = p_bar * 1e5
-        hs = np.linspace(h1_kJkg, h2_kJkg, n) * 1e3
+    # def isobar_Ts(p_bar, h1_kJkg, h2_kJkg, n=40):
+    #     p_Pa = p_bar * 1e5
+    #     hs = np.linspace(h1_kJkg, h2_kJkg, n) * 1e3
         
-        T = fluid_from_wrapper.T_ph(p_Pa, hs) - 273.15
-        s = fluid_from_wrapper.s_ph(p_Pa, hs) /1e3
-        # T = PropsSI('T', 'P', p_Pa, 'H', hs, FLUID) - 273.15
-        # s = PropsSI('S', 'P', p_Pa, 'H', hs, FLUID) / 1e3
-        return T, s
+    #     T = fluid_from_wrapper.T_ph(p_Pa, hs) - 273.15
+    #     s = fluid_from_wrapper.s_ph(p_Pa, hs) /1e3
+    #     # T = PropsSI('T', 'P', p_Pa, 'H', hs, FLUID) - 273.15
+    #     # s = PropsSI('S', 'P', p_Pa, 'H', hs, FLUID) / 1e3
+    #     return T, s
     
     
-    T_crit = fluid_from_wrapper._T_crit
-    # T_crit = PropsSI('Tcrit', FLUID)
-    T_dome = np.linspace(280, T_crit - 1.5, 200)
+    # T_crit = fluid_from_wrapper._T_crit
+    # # T_crit = PropsSI('Tcrit', FLUID)
+    # T_dome = np.linspace(280, T_crit - 5, 200)
     
-    sf = np.zeros(len(T_dome))
-    sg = np.zeros(len(T_dome))
-    for T_d in T_dome:
-        sf = fluid_from_wrapper.s_QT(0, T_d) /1e3
-        sg = fluid_from_wrapper.s_QT(1, T_d) /1e3
+    # sf = np.zeros(len(T_dome))
+    # sg = np.zeros(len(T_dome))
+    # # for i in range(T_dome):
+    # for i, T_d in enumerate(T_dome):
+    #     # T_d = T_dome[i]
+    #     sf[i] = fluid_from_wrapper.s_QT(0, T_d) /1e3
+    #     sg[i] = fluid_from_wrapper.s_QT(1, T_d) /1e3
     
-    # sf = PropsSI('S', 'T', T_dome, 'Q', 0, FLUID) / 1e3
-    # sg = PropsSI('S', 'T', T_dome, 'Q', 1, FLUID) / 1e3
-    T_dome_C = T_dome - 273.15
+    # # sf = PropsSI('S', 'T', T_dome, 'Q', 0, FLUID) / 1e3
+    # # sg = PropsSI('S', 'T', T_dome, 'Q', 1, FLUID) / 1e3
+    # T_dome_C = T_dome - 273.15
     
-    fig, ax = plt.subplots(figsize=(7, 5.5))
-    ax.plot(np.concatenate([sf, sg[::-1]]), np.concatenate([T_dome_C, T_dome_C[::-1]]),
-            'k-', lw=1, label='sat. dome')
+    # fig, ax = plt.subplots(figsize=(7, 5.5))
+    # ax.plot(np.concatenate([sf, sg[::-1]]), np.concatenate([T_dome_C, T_dome_C[::-1]]),
+    #         'k-', lw=1, label='sat. dome')
     
-    states = {'1': b01, '2': b02, '3': b03, '4': b04}
-    pts = {k: conn_Ts(v) for k, v in states.items()}
+    # states = {'1': b01, '2': b02, '3': b03, '4': b04}
+    # pts = {k: conn_Ts(v) for k, v in states.items()}
     
-    ax.plot([pts['1'][1], pts['2'][1]], [pts['1'][0], pts['2'][0]], 'r-', lw=2, label='compressor')
-    T23, s23 = isobar_Ts(b02.p.val, b02.h.val, b03.h.val)
-    ax.plot(s23, T23, 'orange', lw=2, label='condenser')
-    ax.plot([pts['3'][1], pts['4'][1]], [pts['3'][0], pts['4'][0]], 'g--', lw=2, label='expansion valve')
-    T41, s41 = isobar_Ts(b04.p.val, b04.h.val, b01.h.val)
-    ax.plot(s41, T41, 'b-', lw=2, label='evaporator')
+    # ax.plot([pts['1'][1], pts['2'][1]], [pts['1'][0], pts['2'][0]], 'r-', lw=2, label='compressor')
+    # T23, s23 = isobar_Ts(b02.p.val, b02.h.val, b03.h.val)
+    # ax.plot(s23, T23, 'orange', lw=2, label='condenser')
+    # ax.plot([pts['3'][1], pts['4'][1]], [pts['3'][0], pts['4'][0]], 'g--', lw=2, label='expansion valve')
+    # T41, s41 = isobar_Ts(b04.p.val, b04.h.val, b01.h.val)
+    # ax.plot(s41, T41, 'b-', lw=2, label='evaporator')
     
-    for k, (T, s) in pts.items():
-        ax.plot(s, T, 'ko', ms=5)
-        ax.annotate(k, (s, T), textcoords='offset points', xytext=(6, 4))
+    # for k, (T, s) in pts.items():
+    #     ax.plot(s, T, 'ko', ms=5)
+    #     ax.annotate(k, (s, T), textcoords='offset points', xytext=(6, 4))
     
-    ax.set_xlabel('specific entropy in kJ/kg-K')
-    ax.set_ylabel('temperature in degC')
-    ax.set_title('LT loop (R1233zd(E)) -- T-s diagram')
-    ax.legend(loc='lower right')
-    ax.grid(alpha=0.3)
-    plt.show()
+    # ax.set_xlabel('specific entropy in kJ/kg-K')
+    # ax.set_ylabel('temperature in degC')
+    # ax.set_title('LT loop (R1233zd(E)) -- T-s diagram')
+    # ax.legend(loc='lower right')
+    # ax.grid(alpha=0.3)
+    # plt.show()
     
     
     
     
     """14 bis : T-Q diagram"""
     
-    def counter_current_profile(m_hot, fluid_hot, p_hot_in_bar, p_hot_out_bar, h_hot_in, h_hot_out,
-                                 m_cold, fluid_cold, p_cold_in_bar, p_cold_out_bar, h_cold_in, h_cold_out,
-                                 n=40):
-        Q_total = m_cold * (h_cold_out - h_cold_in)  # kW
-        Q = np.linspace(0, Q_total, n)
-        h_cold = h_cold_in + Q / m_cold
-        h_hot = h_hot_out + Q / m_hot
-        p_cold = np.linspace(p_cold_in_bar, p_cold_out_bar, n) * 1e5
-        p_hot = np.linspace(p_hot_out_bar, p_hot_in_bar, n) * 1e5
+    # def counter_current_profile(m_hot, fluid_hot, p_hot_in_bar, p_hot_out_bar, h_hot_in, h_hot_out,
+    #                              m_cold, fluid_cold, p_cold_in_bar, p_cold_out_bar, h_cold_in, h_cold_out,
+    #                              n=40):
+    #     Q_total = m_cold * (h_cold_out - h_cold_in)  # kW
+    #     Q = np.linspace(0, Q_total, n)
+    #     h_cold = h_cold_in + Q / m_cold
+    #     h_hot = h_hot_out + Q / m_hot
+    #     p_cold = np.linspace(p_cold_in_bar, p_cold_out_bar, n) * 1e5
+    #     p_hot = np.linspace(p_hot_out_bar, p_hot_in_bar, n) * 1e5
         
         
-        T_cold = PropsSI('T', 'P', p_cold, 'H', h_cold * 1e3, fluid_cold) - 273.15
-        T_hot = PropsSI('T', 'P', p_hot, 'H', h_hot * 1e3, fluid_hot) - 273.15
-        return Q, T_hot, T_cold
+    #     T_cold = PropsSI('T', 'P', p_cold, 'H', h_cold * 1e3, fluid_cold) - 273.15
+    #     T_hot = PropsSI('T', 'P', p_hot, 'H', h_hot * 1e3, fluid_hot) - 273.15
+    #     return Q, T_hot, T_cold
     
     
-    fig, axs = plt.subplots(1, 2, figsize=(11, 4.5))
+    # fig, axs = plt.subplots(1, 2, figsize=(11, 4.5))
     
-    Q, Th, Tc = counter_current_profile(
-        a02.m.val, 'water', a02.p.val, a03.p.val, a02.h.val, a03.h.val,
-        b04.m.val, FLUID, b04.p.val, b01.p.val, b04.h.val, b01.h.val)
-    axs[0].plot(Q, Th, 'r-o', ms=3, label='geothermal water')
-    axs[0].plot(Q, Tc, 'b-o', ms=3, label=FLUID)
-    axs[0].set_title(f'Evaporator (min approach = {(Th - Tc).min():.2f} K)')
-    axs[0].set_xlabel('cumulative heat duty in kW')
-    axs[0].set_ylabel('temperature in degC')
-    axs[0].legend()
-    axs[0].grid(alpha=0.3)
+    # Q, Th, Tc = counter_current_profile(
+    #     a02.m.val, 'water', a02.p.val, a03.p.val, a02.h.val, a03.h.val,
+    #     b04.m.val, FLUID, b04.p.val, b01.p.val, b04.h.val, b01.h.val)
+    # axs[0].plot(Q, Th, 'r-o', ms=3, label='geothermal water')
+    # axs[0].plot(Q, Tc, 'b-o', ms=3, label=FLUID)
+    # axs[0].set_title(f'Evaporator (min approach = {(Th - Tc).min():.2f} K)')
+    # axs[0].set_xlabel('cumulative heat duty in kW')
+    # axs[0].set_ylabel('temperature in degC')
+    # axs[0].legend()
+    # axs[0].grid(alpha=0.3)
     
-    Q, Th, Tc = counter_current_profile(
-        b02.m.val, FLUID, b02.p.val, b03.p.val, b02.h.val, b03.h.val,
-        d01.m.val, 'water', d01.p.val, d02.p.val, d01.h.val, d02.h.val)
-    axs[1].plot(Q, Th, 'r-o', ms=3, label=FLUID)
-    axs[1].plot(Q, Tc, 'b-o', ms=3, label='district heating water')
-    axs[1].set_title(f'Condenser (min approach = {(Th - Tc).min():.2f} K)')
-    axs[1].set_xlabel('cumulative heat duty in kW')
-    axs[1].set_ylabel('temperature in degC')
-    axs[1].legend()
-    axs[1].grid(alpha=0.3)
+    # Q, Th, Tc = counter_current_profile(
+    #     b02.m.val, FLUID, b02.p.val, b03.p.val, b02.h.val, b03.h.val,
+    #     d01.m.val, 'water', d01.p.val, d02.p.val, d01.h.val, d02.h.val)
+    # axs[1].plot(Q, Th, 'r-o', ms=3, label=FLUID)
+    # axs[1].plot(Q, Tc, 'b-o', ms=3, label='district heating water')
+    # axs[1].set_title(f'Condenser (min approach = {(Th - Tc).min():.2f} K)')
+    # axs[1].set_xlabel('cumulative heat duty in kW')
+    # axs[1].set_ylabel('temperature in degC')
+    # axs[1].legend()
+    # axs[1].grid(alpha=0.3)
     
-    plt.tight_layout()
-    plt.show()
+    # plt.tight_layout()
+    # plt.show()
 
     UA_ev = lt_evaporator.UA.val
     
