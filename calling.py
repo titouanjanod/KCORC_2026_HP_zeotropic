@@ -36,7 +36,7 @@ pinch_ev = np.zeros(len(npz_file_names))
 pinch_cd = np.zeros(len(npz_file_names))
 
 mode = "UA_in" # "pinch_in" or "UA_in" or "base"
-
+results_name = "pinch_to_UA"
 pinches = {"pinch_ev" : 5,
            "pinch_cd" : 5}
 
@@ -59,6 +59,7 @@ df = pd.DataFrame({ "Fluid":npz_file_names,
                    "UA_ev" :UA_ev, 
                    "UA_cd":UA_cd})
 
+
 """ UA based """
 
 # mode = "UA_in"
@@ -74,7 +75,9 @@ df = pd.DataFrame({ "Fluid":npz_file_names,
 #                    "pinch_ev": pinch_ev,
 #                    "pinch_cd":pinch_cd})
 
-
+#%%
+results_name = "UA_to_pinch"
+df.to_csv(f"{results_name}.csv", index=False)
 
 #%%
 
@@ -126,15 +129,23 @@ ylabel_dict = {
 # ==========================================================
 # COLORS
 # ==========================================================
+# colors = {
+#     "CYCLOPEN_BUTANE": "tab:blue",
+#     "CYCLOPEN_R1233ZDE3" : "tab:yellow",
+#     "Isopentane_Isobutane": "tab:red",
+#     "PENTANE_R1336MZZE": "tab:green",
+#     "R1224YDZ_R1234ZEE": "tab:orange",
+#     "R1336MZZZ_R1336MZZE": "tab:purple",
+# }
 colors = {
-    "CYCLOPEN_BUTANE": "tab:blue",
-    "CYCLOPEN_R1233ZDE3" : "tab:yellow",
-    "Isopentane_Isobutane": "tab:red",
-    "PENTANE_R1336MZZE": "tab:green",
-    "R1224YDZ_R1234ZEE": "tab:orange",
-    "R1336MZZZ_R1336MZZE": "tab:purple",
+    "CYCLOPEN_BUTANE"      : "#0072B2",  # bleu
+    "CYCLOPEN_R1233ZDE"    : "#D55E00",  # vermillon
+    "CYCLOPEN_R1336MZZZ"   : "#009E73",  # vert
+    "Isopentane_Isobutane" : "#CC79A7",  # magenta
+    "PENTANE_R1336MZZE"    : "#E69F00",  # orange
+    "R1224YDZ_R1234ZEE"    : "#56B4E9",  # cyan
+    "R1336MZZZ_R1336MZZE"  : "#000000",  # noir
 }
-
 # ==========================================================
 # CREATE 3 SUBPLOTS
 # ==========================================================
