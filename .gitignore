@@ -1,0 +1,23 @@
+# Ignore virtual environment
+myenv/
+
+# Optional: ignore IDE-specific files
+.vscode/
+*.idea/
+
+# Ignore Python bytecode files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+# Ignore all Jupyter Notebook files
+# *.ipynb
+
+# Confidential codes
+c_*.py
+# geometry*.py
+
+# Ignore Spyder Workspaces
+*.bak
+
+.spyproject/
