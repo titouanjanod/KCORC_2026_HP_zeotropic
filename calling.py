@@ -27,7 +27,7 @@ npz_file_names = [
 
 
 # selected_fluid = 'R1233zd(E)'
-# selected_fluid = 'CYCLOPEN_BUTANE_mass_0.25_0.75'
+selected_fluid = 'CYCLOPEN_BUTANE_mass_0.25_0.75'
 
 COP = np.zeros(len(npz_file_names))
 UA_ev = np.zeros(len(npz_file_names))
@@ -49,30 +49,30 @@ UAs = {"UA_ev": 460976.8631329016,
 
 """ Pinch based"""
 
-# mode = "pinch_in"
-# for i, one_fluid in enumerate(npz_file_names) :
-    
-#     _, COP[i], UA_ev[i], UA_cd[i], pinch_ev[i], pinch_cd[i]  = overall(one_fluid, mode, pinches)
-    
-# df = pd.DataFrame({ "Fluid":npz_file_names, 
-#                    "COP":COP, 
-#                    "UA_ev" :UA_ev, 
-#                    "UA_cd":UA_cd})
-
-""" UA based """
-
-mode = "UA_in"
-
+mode = "pinch_in"
 for i, one_fluid in enumerate(npz_file_names) :
     
-    _, COP[i], UA_ev[i], UA_cd[i], pinch_ev[i], pinch_cd[i] = overall(one_fluid, mode, UAs = UAs)
+    _, COP[i], UA_ev[i], UA_cd[i], pinch_ev[i], pinch_cd[i]  = overall(one_fluid, mode, pinches)
     
 df = pd.DataFrame({ "Fluid":npz_file_names, 
                    "COP":COP, 
                    "UA_ev" :UA_ev, 
-                   "UA_cd":UA_cd,
-                   "pinch_ev": pinch_ev,
-                   "pinch_cd":pinch_cd})
+                   "UA_cd":UA_cd})
+
+""" UA based """
+
+# mode = "UA_in"
+
+# for i, one_fluid in enumerate(npz_file_names) :
+    
+#     _, COP[i], UA_ev[i], UA_cd[i], pinch_ev[i], pinch_cd[i] = overall(one_fluid, mode, UAs = UAs)
+    
+# df = pd.DataFrame({ "Fluid":npz_file_names, 
+#                    "COP":COP, 
+#                    "UA_ev" :UA_ev, 
+#                    "UA_cd":UA_cd,
+#                    "pinch_ev": pinch_ev,
+#                    "pinch_cd":pinch_cd})
 
 
 
@@ -87,7 +87,8 @@ df = pd.DataFrame({ "Fluid":npz_file_names,
 # ==========================================================
 lw = 5            # line width
 ms = 10           # marker size
-fs = 16           # font size
+fs = 40           # font size
+fs_ticks = 20
 alpha = 0.9
 figsize = (10, 7)
 
@@ -113,11 +114,21 @@ for name in df_plot["Fluid"]:
 df_plot["Family"] = families
 df_plot["MassFraction"] = mass_frac
 
+ylabel_dict = {
+    "COP": r"$COP$",
+    "UA_ev": r"$UA_{ev}$",
+    "UA_cd": r"$UA_{cd}$",
+    "pinch_ev": r"$\Delta T_{pp,ev}$",
+    "pinch_cd": r"$\Delta T_{pp,cd}$"
+}
+
+
 # ==========================================================
 # COLORS
 # ==========================================================
 colors = {
     "CYCLOPEN_BUTANE": "tab:blue",
+    "CYCLOPEN_R1233ZDE3" : "tab:yellow",
     "Isopentane_Isobutane": "tab:red",
     "PENTANE_R1336MZZE": "tab:green",
     "R1224YDZ_R1234ZEE": "tab:orange",
@@ -151,21 +162,33 @@ for ax, var in zip(axes, variables):
             label=family
         )
 
-    ax.set_ylabel(var, fontsize=fs)
+    # ax.set_ylabel(var, fontsize=fs)
     ax.grid(True, alpha=0.3)
 
 # ==========================================================
 # FINAL FORMATTING
 # ==========================================================
-axes[-1].set_xlabel("Mass fraction of first component [-]", fontsize=fs)
+axes[1].set_xlabel("Mass fraction of first component [-]", fontsize=fs)
+axes[1].set_xlabel(
+    r"$x_1$ [-]",
+    fontsize=fs)
 
+# axes_len = [0,1,2]
+# for i in axes_len:
+#     print(i)
+#     axes[i].set_ylabel(ylabel_dict[var], fontsize=fs)
+
+for i, var in enumerate(variables):
+    axes[i].set_ylabel(ylabel_dict[var], fontsize=fs)
+    
+    
 axes[0].legend(
     fontsize=12,
     loc='best'
 )
 
 for ax in axes:
-    ax.tick_params(labelsize=fs-2)
+    ax.tick_params(labelsize=fs_ticks)
 
 plt.tight_layout()
 plt.show()
