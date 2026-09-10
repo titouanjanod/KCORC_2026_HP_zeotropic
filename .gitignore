@@ -21,3 +21,4 @@ c_*.py
 *.bak
 
 .spyproject/
+.spyproject\
