@@ -36,7 +36,8 @@ pinch_ev = np.zeros(len(npz_file_names))
 pinch_cd = np.zeros(len(npz_file_names))
 
 mode = "UA_in" # "pinch_in" or "UA_in" or "base"
-results_name = "pinch_to_UA"
+results_name = "UA_to_pinch"
+
 pinches = {"pinch_ev" : 5,
            "pinch_cd" : 5}
 
@@ -49,34 +50,34 @@ UAs = {"UA_ev": 460976.8631329016,
 
 """ Pinch based"""
 
-mode = "pinch_in"
-for i, one_fluid in enumerate(npz_file_names) :
-    
-    _, COP[i], UA_ev[i], UA_cd[i], pinch_ev[i], pinch_cd[i]  = overall(one_fluid, mode, pinches)
-    
-df = pd.DataFrame({ "Fluid":npz_file_names, 
-                   "COP":COP, 
-                   "UA_ev" :UA_ev, 
-                   "UA_cd":UA_cd})
-
-
-""" UA based """
-
-# mode = "UA_in"
-
+# mode = "pinch_in"
 # for i, one_fluid in enumerate(npz_file_names) :
     
-#     _, COP[i], UA_ev[i], UA_cd[i], pinch_ev[i], pinch_cd[i] = overall(one_fluid, mode, UAs = UAs)
+#     _, COP[i], UA_ev[i], UA_cd[i], pinch_ev[i], pinch_cd[i]  = overall(one_fluid, mode, pinches)
     
 # df = pd.DataFrame({ "Fluid":npz_file_names, 
 #                    "COP":COP, 
 #                    "UA_ev" :UA_ev, 
-#                    "UA_cd":UA_cd,
-#                    "pinch_ev": pinch_ev,
-#                    "pinch_cd":pinch_cd})
+#                    "UA_cd":UA_cd})
+
+
+""" UA based """
+
+mode = "UA_in"
+
+for i, one_fluid in enumerate(npz_file_names) :
+    
+    _, COP[i], UA_ev[i], UA_cd[i], pinch_ev[i], pinch_cd[i] = overall(one_fluid, mode, UAs = UAs)
+    
+df = pd.DataFrame({ "Fluid":npz_file_names, 
+                   "COP":COP, 
+                   "UA_ev" :UA_ev, 
+                   "UA_cd":UA_cd,
+                   "pinch_ev": pinch_ev,
+                   "pinch_cd":pinch_cd})
 
 #%%
-results_name = "UA_to_pinch"
+
 df.to_csv(f"{results_name}.csv", index=False)
 
 #%%
