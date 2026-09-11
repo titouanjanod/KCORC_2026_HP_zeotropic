@@ -176,9 +176,7 @@ def overall(selected_fluid, mode, pinches =None, UAs = None, plots=False):
     """11"""
     
     nw.solve('design')
-    # nw.print_results()
-    
-    
+    nw.print_results()
     
     """12"""
     
