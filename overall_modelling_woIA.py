@@ -245,12 +245,15 @@ def overall(selected_fluid, mode, pinches =None, UAs = None, plots=False):
     def isobar_Ts(p_bar, h1_kJkg, h2_kJkg, n=40):
         p_Pa = p_bar * 1e5
         hs = np.linspace(h1_kJkg, h2_kJkg, n) * 1e3
+        T_iso = np.zeros(len(hs))
+        s_iso = np.zeros(len(hs))
         
-        T = fluid_from_wrapper.T_ph(p_Pa, hs) - 273.15
-        s = fluid_from_wrapper.s_ph(p_Pa, hs) /1e3
+        for i in range(len(hs)):
+            T_iso[i] = fluid_from_wrapper.T_ph(p_Pa, hs[i]) - 273.15
+            s_iso[i] = fluid_from_wrapper.s_ph(p_Pa, hs[i]) /1e3
         # T = PropsSI('T', 'P', p_Pa, 'H', hs, FLUID) - 273.15
         # s = PropsSI('S', 'P', p_Pa, 'H', hs, FLUID) / 1e3
-        return T, s
+        return T_iso, s_iso
     
     if plots:
         T_crit = fluid_from_wrapper._T_crit
@@ -312,11 +315,15 @@ def overall(selected_fluid, mode, pinches =None, UAs = None, plots=False):
         if fluid_cold == 'water':
             T_cold = PropsSI('T', 'P', p_cold, 'H', h_cold * 1e3, fluid_cold) - 273.15
         else:
-            T_cold = fluid_from_wrapper.T_ph(p_cold, h_cold) - 273.15
+            T_cold = np.zeros(len(p_cold))
+            for i in range(len(p_cold)):
+                T_cold[i] = fluid_from_wrapper.T_ph(p_cold[i], h_cold[i]) - 273.15
         if fluid_hot == 'water': 
             T_hot = PropsSI('T', 'P', p_hot, 'H', h_hot * 1e3, fluid_hot) - 273.15
         else:
-            T_hot = fluid_from_wrapper.T_ph(p_hot, h_hot) - 273.15
+            T_hot = np.zeros(len(p_hot))
+            for i in range(len(p_hot)):
+                T_hot[i] = fluid_from_wrapper.T_ph(p_hot[i], h_hot[i]) - 273.15
         return Q, T_hot, T_cold
     
     if plots:
