@@ -27,7 +27,7 @@ npz_file_names = [
 
 
 # selected_fluid = 'R1233zd(E)'
-selected_fluid = 'CYCLOPEN_BUTANE_mass_0.25_0.75'
+selected_fluid = 'CYCLOPEN_BUTANE_mass_0.85_0.15'
 
 COP = np.zeros(len(npz_file_names))
 UA_ev = np.zeros(len(npz_file_names))
@@ -35,13 +35,13 @@ UA_cd  = np.zeros(len(npz_file_names))
 pinch_ev = np.zeros(len(npz_file_names))
 pinch_cd = np.zeros(len(npz_file_names))
 
-mode = "UA_in" # "pinch_in" or "UA_in" or "base"
+mode = "pinch_in" # "pinch_in" or "UA_in" or "base"
 results_name = "UA_to_pinch"
 
 pinches = {"pinch_ev" : 5,
            "pinch_cd" : 5}
 
-# nw_1, COP_1, UA_ev_1, UA_cd_1, pinch_ev_1, pinch_cd_1 = overall(selected_fluid, mode, pinches)
+nw_1, COP_1, UA_ev_1, UA_cd_1, pinch_ev_1, pinch_cd_1 = overall(selected_fluid, mode, pinches, plots=True)
 
 UAs = {"UA_ev": 460976.8631329016,
        "UA_cd": 492569.33126388316}
@@ -63,22 +63,22 @@ UAs = {"UA_ev": 460976.8631329016,
 
 """ UA based """
 
-mode = "UA_in"
+# mode = "UA_in"
 
-for i, one_fluid in enumerate(npz_file_names) :
+# for i, one_fluid in enumerate(npz_file_names) :
     
-    _, COP[i], UA_ev[i], UA_cd[i], pinch_ev[i], pinch_cd[i] = overall(one_fluid, mode, UAs = UAs)
+#     _, COP[i], UA_ev[i], UA_cd[i], pinch_ev[i], pinch_cd[i] = overall(one_fluid, mode, UAs = UAs)
     
-df = pd.DataFrame({ "Fluid":npz_file_names, 
-                   "COP":COP, 
-                   "UA_ev" :UA_ev, 
-                   "UA_cd":UA_cd,
-                   "pinch_ev": pinch_ev,
-                   "pinch_cd":pinch_cd})
+# df = pd.DataFrame({ "Fluid":npz_file_names, 
+#                    "COP":COP, 
+#                    "UA_ev" :UA_ev, 
+#                    "UA_cd":UA_cd,
+#                    "pinch_ev": pinch_ev,
+#                    "pinch_cd":pinch_cd})
 
 #%%
 
-df.to_csv(f"{results_name}.csv", index=False)
+# df.to_csv(f"{results_name}.csv", index=False)
 
 #%%
 
